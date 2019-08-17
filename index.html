@@ -1,0 +1,129 @@
+<html>
+  <head></head>
+  <body style="text-align: center; margin: 0; padding: 0;">
+    <div id="game" style="border: 1px solid #000000; display: inline-block;"></div>
+    <script type="text/javascript" src="crafty-min.js"></script>
+    <script>
+      Crafty.c("Projectile",
+      {
+        dir: "",
+        moveDistance: 7,
+        init: function()
+        {
+          this.requires("Collision");
+        },
+        fire: function()
+        {        
+          this.bind("EnterFrame", function()
+          {
+            this.move(this.dir, this.moveDistance);
+            if(this.x > Crafty.viewport.width || this.x < 0 || this.y > Crafty.viewport.height || this.y < 0) 
+              this.destroy();
+          });
+
+          this.onHit("Shooter", function(target)
+          {
+            target[0].obj.destroy();
+            this.destroy();
+          });
+          
+          this.onHit("Wall", function(target)
+          {
+            this.destroy();
+          });
+        }
+      });
+      
+      Crafty.c("Shooter",
+      {
+        shootKey: null,
+        init: function()
+        {
+          this.requires("Keyboard");
+          this.bind("KeyDown", function(e)
+          {
+            if(e.key === this.shootKey)
+            {
+              var dir = "";
+              var x = 0;
+              var y = 0;
+              if (this._vx > 0) { dir = "e"; x = this.x + 110; y = this.y + 50; }
+              if (this._vx < 0) { dir = "w"; x = this.x - 10; y = this.y + 50; }
+              if (this._vy > 0) { dir = "s"; x = this.x + 50; y = this.y + 110; }
+              if (this._vy < 0) { dir = "n"; x = this.x + 50; y = this.y - 10; }
+              if (dir != "")
+              {
+                var projectile = Crafty.e("2D, DOM, Color, Projectile");
+                projectile.attr(
+                {
+                  x: x,
+                  y: y,
+                  w: 5,
+                  h: 5,
+                  dir: dir
+                })
+                .color('#00F')
+                .fire();
+              }
+            };
+          });
+        }
+      });
+      
+	  var iGameWidth = document.documentElement.clientWidth-10;
+	  var iGameHeight = document.documentElement.clientHeight-10;
+      Crafty.init(iGameWidth, iGameHeight, document.getElementById('game'));
+      
+      var p1 = Crafty.e('2D, DOM, Color, Multiway, Shooter, Collision')
+      .attr({x: 50, y: 50, w: 100, h: 100})
+      .color('#F00')
+      .multiway(150, {W: -90, S: 90, D: 0, A: 180}, {multipleDirectionBehavior: "first"});
+      p1.shootKey = Crafty.keys.SPACE;
+      p1.onHit("Wall", function(target)
+      {
+        this.x -= this._dx;
+        this.y -= this._dy;
+      });
+      
+      var p2 = Crafty.e('2D, DOM, Color, Multiway, Shooter, Collision')
+      .attr({x: iGameWidth - 150, y: iGameHeight - 150, w: 100, h: 100})
+      .color('#0F0')
+      .multiway(150, {UP_ARROW: -90, DOWN_ARROW: 90, RIGHT_ARROW: 0, LEFT_ARROW: 180}, {multipleDirectionBehavior: "first"})
+      p2.shootKey = Crafty.keys.ENTER;
+      p2.onHit("Wall", function(target)
+      {
+        this.x -= this._dx;
+        this.y -= this._dy;
+      });
+      
+      function getRandomIntInclusive(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
+      }
+
+      Crafty.e('2D, DOM, Color, Wall')
+      .attr({x: 0, y: 0, w: 10, h: Crafty.viewport.height})
+      .color('#888');
+      
+      Crafty.e('2D, DOM, Color, Wall')
+      .attr({x: 0, y: 0, w: Crafty.viewport.width, h: 10})
+      .color('#888');
+      
+      Crafty.e('2D, DOM, Color, Wall')
+      .attr({x: Crafty.viewport.width - 10, y: 0, w: 10, h: Crafty.viewport.height})
+      .color('#888');
+      
+      Crafty.e('2D, DOM, Color, Wall')
+      .attr({x: 0, y: Crafty.viewport.height - 10, w: Crafty.viewport.width, h: 10})
+      .color('#888');
+      
+      for (var i = 0; i < 8; i++)
+      {
+        Crafty.e('2D, DOM, Color, Wall')
+        .attr({x: getRandomIntInclusive(200, Crafty.viewport.width - 300), y: getRandomIntInclusive(200, Crafty.viewport.height - 300), w: getRandomIntInclusive(50, 200), h: getRandomIntInclusive(50, 200)})
+        .color('#888')
+      }
+    </script>
+  </body>
+</html>
