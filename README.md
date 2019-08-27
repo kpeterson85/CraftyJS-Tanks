@@ -1,9 +1,11 @@
 # CraftyJS-Tanks
-Tank battle game using craftyjs
+Tank battle games using craftyjs
 
-Play this game by visiting the link below:
+Play these games by visiting the link below:
 
-http://htmlpreview.github.io/?https://github.com/kpeterson85/CraftyJS-Tanks/blob/master/index.html
+## 2 Player Tank Battle
+
+http://htmlpreview.github.io/?https://github.com/kpeterson85/CraftyJS-Tanks/blob/master/2-player-battle.html
 
 1st Player Controls
 
@@ -14,3 +16,11 @@ http://htmlpreview.github.io/?https://github.com/kpeterson85/CraftyJS-Tanks/blob
 
 - Up, Down, Left, Right arrow keys to move
 - Enter (on number pad) to shoot
+
+## 1 Player Tank Survival
+
+http://htmlpreview.github.io/?https://github.com/kpeterson85/CraftyJS-Tanks/blob/master/1-player-mouse.html
+
+- Up, Down, Left, Right arrow keys to move
+- Mouse to aim and shoot
+
