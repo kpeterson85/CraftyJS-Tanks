@@ -4,9 +4,9 @@
     <div id="game" style="border: 1px solid #000000; display: inline-block;"></div>
     <script type="text/javascript" src="crafty-min.js"></script>
     <script>
+      //COMPONENTS
       Crafty.c("Projectile",
       {
-        componentToDestroy: null,
         xDistance: 0,
         yDistance: 0,
         init: function()
@@ -21,15 +21,7 @@
             this.y += this.yDistance;
             if(this.x > Crafty.viewport.width || this.x < 0 || this.y > Crafty.viewport.height || this.y < 0) 
               this.destroy();
-          });
-
-          this.onHit(this.componentToDestroy, function(target)
-          {
-            target[0].obj.deactivateAutoAttack();
-            target[0].obj.destroy();
-            target[0].obj.gun.destroy();
-            this.destroy();
-          });
+          });          
           
           this.onHit("Wall", function(target)
           {
@@ -67,55 +59,60 @@
           {
             tank.gun.x = tank.x + 20;
             tank.gun.y = tank.y + 25;
-            
+          });
+          
+          
+        },
+        activateAutoAttack: function()
+        {          
+          var tank = this;
+          
+          tank.bind('EnterFrame', function()
+          {            
             if (tank.focusEntity != null)
             {       
               var iPlayerAngle = angle(tank.focusEntity.x + 25, tank.focusEntity.y + 25, tank.x + 25, tank.y + 25) + 90;
               tank.gun.rotation = iPlayerAngle
-              console.log(iPlayerAngle);
+              //console.log(iPlayerAngle);
               //move towards player
               /*
-               135    180      225        
+               135    180    225        
                    
                 90     X     270                                   
                                    
-                 45      0     -45  
+                45     0     -45  
               */
               var iAttackSpeed = 1
               if (iPlayerAngle >= -45 && iPlayerAngle < 45)
               {
-                console.log("down");
+                //console.log("down");
                 tank.y += iAttackSpeed;
                 tank._dy = iAttackSpeed;
                 tank._dx = 0
               }
               else if (iPlayerAngle >= 45 && iPlayerAngle <= 135)
               {
-                console.log("left");
+                //console.log("left");
                 tank.x -= iAttackSpeed;
                 tank._dy = 0;
                 tank._dx = -iAttackSpeed;
               }
               else if (iPlayerAngle < -45 || iPlayerAngle > 225)
               {
-                console.log("right");
+                //console.log("right");
                 tank.x += iAttackSpeed;
                 tank._dy = 0;
                 tank._dx = iAttackSpeed;
               }
               else if (iPlayerAngle > 135 && iPlayerAngle <= 225)
               {
-                console.log("up");
+                //console.log("up");
                 tank.y -= iAttackSpeed;
                 tank._dy = -iAttackSpeed
                 tank._dx = 0;
               }
             }
           });
-        },
-        activateAutoAttack: function()
-        {          
-          var tank = this;
           
           tank.shootInternal = setInterval(function()
           {             
@@ -134,7 +131,16 @@
             })
             .color('#00F');
             
-            projectile.componentToDestroy = "Player";
+            projectile.onHit("Player", function(target)
+            {
+              Crafty("Enemy").each(function()
+              {
+                this.deactivateAutoAttack(); //stop all enemies from shooting
+              });
+              target[0].obj.destroy();
+              target[0].obj.gun.destroy();
+              this.destroy();              
+            });
             
             projectile.fire();
   
@@ -143,6 +149,7 @@
         deactivateAutoAttack: function()
         {
           var tank = this;
+          tank.unbind('EnterFrame');
           clearInterval(tank.shootInternal);
         }
       });
@@ -151,95 +158,170 @@
       var iGameHeight = document.documentElement.clientHeight-10;
       Crafty.init(iGameWidth, iGameHeight, document.getElementById('game'));
         
-      var p1tank = Crafty.e('Multiway, Tank, Player')
-      .multiway(150, {UP_ARROW: -90, DOWN_ARROW: 90, RIGHT_ARROW: 0, LEFT_ARROW: 180}, {multipleDirectionBehavior: "first"});
-      p1tank.gun.color('#00a100')
+      //MAIN GAME LOOP
+      var iRound = 1;
       
-      function angle(cx, cy, ex, ey) {
+      ShowNextRound();
+      
+      function ShowNextRound()
+      {
+        Crafty.e("2D, DOM, Text, RoundNumber").attr({ x: Crafty.viewport.width / 2, y: Crafty.viewport.height / 2 }).text("Wave " + iRound);
+        
+        setTimeout(function()
+        {
+          Crafty("RoundNumber").each(function()
+          {
+            this.destroy();
+          });
+          StartRound();
+        }, 2000);
+      }
+      
+      var p1tank;
+      
+      function angle(cx, cy, ex, ey)
+      {
         var dy = ey - cy;
         var dx = ex - cx;
         var theta = Math.atan2(dy, dx); // range (-PI, PI]
         theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
         return theta;
       }
-      function angle360(cx, cy, ex, ey) {
+      function angle360(cx, cy, ex, ey)
+      {
         var theta = angle(cx, cy, ex, ey); // range (-180, 180]
         if (theta < 0) theta = 360 + theta; // range [0, 360)
         return theta;
       }
-      Crafty.addEvent(this, Crafty.stage.elem, 'mousemove', function(e)
-      {
-        var relative = Crafty.domHelper.translate(e.clientX, e.clientY);           
-        p1tank.gun.rotation = angle(relative.x, relative.y, p1tank.x + 25, p1tank.y + 25) + 90;
-      }.bind(this));    
       
-      for (var i = 0; i < 3; i++)
+      function getRandomIntInclusive(min, max)
       {
-        var enemy = Crafty.e('Tank, Enemy')
-        .attr({x: getRandomIntInclusive(100, Crafty.viewport.width - 50), y: getRandomIntInclusive(100, Crafty.viewport.height - 50), w: 50, h: 50})
-        .color('#FF0000');
-        
-        enemy.focusEntity = p1tank;
-        
-        enemy.gun.color("#000");
-        
-        enemy.activateAutoAttack();
-        
-      }      
-      
-      Crafty.addEvent(this, Crafty.stage.elem, 'mousedown', function(e)
-      {
-        var relative = Crafty.domHelper.translate(e.clientX, e.clientY);
-        
-        var xDistance = (relative.x - p1tank.x)*0.02;
-        var yDistance = (relative.y - p1tank.y)*0.02;
-
-        var projectile = Crafty.e("2D, DOM, Color, Projectile");
-        projectile.attr(
-        {
-          x: p1tank.x + 20,
-          y: p1tank.y + 25,
-          w: 5,
-          h: 5,
-          xDistance: xDistance,
-          yDistance: yDistance
-        })
-        .color('#00F');
-            
-        projectile.componentToDestroy = "Enemy";
-        
-        projectile.fire();
-      }.bind(this));    
-    
-      function getRandomIntInclusive(min, max) {
         min = Math.ceil(min);
         max = Math.floor(max);
         return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
       }
-
-      //OUTER EDGE WALLS
-      Crafty.e('2D, DOM, Color, Wall')
-      .attr({x: 0, y: 0, w: 10, h: Crafty.viewport.height})
-      .color('#888');
       
-      Crafty.e('2D, DOM, Color, Wall')
-      .attr({x: 0, y: 0, w: Crafty.viewport.width, h: 10})
-      .color('#888');
-      
-      Crafty.e('2D, DOM, Color, Wall')
-      .attr({x: Crafty.viewport.width - 10, y: 0, w: 10, h: Crafty.viewport.height})
-      .color('#888');
-      
-      Crafty.e('2D, DOM, Color, Wall')
-      .attr({x: 0, y: Crafty.viewport.height - 10, w: Crafty.viewport.width, h: 10})
-      .color('#888');
-      
-      //RANDOM INTERIOR WALLS
-      for (var i = 0; i < 8; i++)
+      function StartRound()
       {
+        p1tank = Crafty.e('Multiway, Tank, Player')
+        .multiway(150, {UP_ARROW: -90, DOWN_ARROW: 90, RIGHT_ARROW: 0, LEFT_ARROW: 180}, {multipleDirectionBehavior: "first"});
+        p1tank.gun.color('#00a100')        
+        
+        Crafty.addEvent(this, Crafty.stage.elem, 'mousemove', function(e)
+        {
+          var relative = Crafty.domHelper.translate(e.clientX, e.clientY);           
+          p1tank.gun.rotation = angle(relative.x, relative.y, p1tank.x + 25, p1tank.y + 25) + 90;
+        }.bind(this));    
+        
+        for (var i = 0; i < iRound; i++)
+        {
+          //pick which sides of the board they will appear (1-top, 2-right, 3-bottom, 4-left)
+          var iWall = getRandomIntInclusive(1, 4);
+          var iX = 0;
+          var iY = 0;
+          if (iWall == 1) //top
+          {
+            iX = getRandomIntInclusive(0, Crafty.viewport.width);
+            iY = -50;
+          }
+          else if (iWall == 2) //right
+          {
+            iX = Crafty.viewport.width + 50;
+            iY = getRandomIntInclusive(0, Crafty.viewport.height);
+          }
+          else if (iWall == 3) //bottom
+          {
+            iX = getRandomIntInclusive(0, Crafty.viewport.width);
+            iY = Crafty.viewport.height + 50;
+          }
+          else if (iWall == 4) //left
+          {
+            iX = -50;
+            iY = getRandomIntInclusive(0, Crafty.viewport.height);;
+          }
+
+          var enemy = Crafty.e('Tank, Enemy')
+          .attr({x: iX, y: iY, w: 50, h: 50})
+          .color('#FF0000');
+          
+          enemy.focusEntity = p1tank;
+          
+          enemy.gun.color("#000");
+          
+          enemy.activateAutoAttack();
+          
+        }      
+        
+        Crafty.addEvent(this, Crafty.stage.elem, 'mousedown', function(e)
+        {
+          var relative = Crafty.domHelper.translate(e.clientX, e.clientY);
+          
+          var xDistance = (relative.x - p1tank.x)*0.02;
+          var yDistance = (relative.y - p1tank.y)*0.02;
+
+          var projectile = Crafty.e("2D, DOM, Color, Projectile");
+          projectile.attr(
+          {
+            x: p1tank.x + 20,
+            y: p1tank.y + 25,
+            w: 5,
+            h: 5,
+            xDistance: xDistance,
+            yDistance: yDistance
+          })
+          .color('#00F');
+              
+          projectile.onHit("Enemy", function(target)
+          {
+            target[0].obj.deactivateAutoAttack();
+            target[0].obj.destroy();
+            target[0].obj.gun.destroy();
+            this.destroy();
+            
+            if (Crafty("Enemy").length == 0)
+            {
+              p1tank.gun.destroy();
+              p1tank.destroy();
+              Crafty("Wall").each(function()
+              {
+                this.destroy();
+              });
+              iRound += 1;
+              ShowNextRound();
+            }
+          });
+          
+          projectile.fire();
+        }.bind(this));    
+      
+        
+
+        //OUTER EDGE WALLS
+        /*
         Crafty.e('2D, DOM, Color, Wall')
-        .attr({x: getRandomIntInclusive(200, Crafty.viewport.width - 300), y: getRandomIntInclusive(200, Crafty.viewport.height - 300), w: 50, h: 50})
-        .color('#888')
+        .attr({x: 0, y: 0, w: 10, h: Crafty.viewport.height})
+        .color('#888');
+        
+        Crafty.e('2D, DOM, Color, Wall')
+        .attr({x: 0, y: 0, w: Crafty.viewport.width, h: 10})
+        .color('#888');
+        
+        Crafty.e('2D, DOM, Color, Wall')
+        .attr({x: Crafty.viewport.width - 10, y: 0, w: 10, h: Crafty.viewport.height})
+        .color('#888');
+        
+        Crafty.e('2D, DOM, Color, Wall')
+        .attr({x: 0, y: Crafty.viewport.height - 10, w: Crafty.viewport.width, h: 10})
+        .color('#888');
+        */
+        
+        //RANDOM INTERIOR WALLS
+        for (var i = 0; i < 8; i++)
+        {
+          Crafty.e('2D, DOM, Color, Wall')
+          .attr({x: getRandomIntInclusive(200, Crafty.viewport.width - 300), y: getRandomIntInclusive(200, Crafty.viewport.height - 300), w: 50, h: 50})
+          .color('#888')
+        }
       }
 
     </script>
