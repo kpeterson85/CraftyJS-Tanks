@@ -1,0 +1,247 @@
+<html>
+  <head></head>
+  <body style="text-align: center; margin: 0; padding: 0;">
+    <div id="game" style="border: 1px solid #000000; display: inline-block;"></div>
+    <script type="text/javascript" src="crafty-min.js"></script>
+    <script>
+      Crafty.c("Projectile",
+      {
+        componentToDestroy: null,
+        xDistance: 0,
+        yDistance: 0,
+        init: function()
+        {
+          this.requires("Collision");
+        },
+        fire: function()
+        {        
+          this.bind("EnterFrame", function()
+          {
+            this.x += this.xDistance;
+            this.y += this.yDistance;
+            if(this.x > Crafty.viewport.width || this.x < 0 || this.y > Crafty.viewport.height || this.y < 0) 
+              this.destroy();
+          });
+
+          this.onHit(this.componentToDestroy, function(target)
+          {
+            target[0].obj.deactivateAutoAttack();
+            target[0].obj.destroy();
+            target[0].obj.gun.destroy();
+            this.destroy();
+          });
+          
+          this.onHit("Wall", function(target)
+          {
+            this.destroy();
+          });
+        }
+      });
+      
+      Crafty.c("Tank",
+      {
+        gun: null,
+        focusEntity: null,
+        shootInternal: null,
+        init: function()
+        {
+          var tank = this;
+          tank
+          .requires("2D, DOM, Color, Collision")
+          .attr({x: 50, y: 50, w: 50, h: 50})
+          .color('#00FF00')
+          
+          tank.onHit("Wall", function(target)
+          {
+            tank.x -= tank._dx;
+            tank.y -= tank._dy;
+          });
+          
+          tank.origin("center");
+          
+          tank.gun = Crafty.e('2D, DOM, Color')
+          .attr({x: 50, y: 50, w: 10, h: 50})          
+          .origin('top center');
+          
+          tank.bind('EnterFrame', function()
+          {
+            tank.gun.x = tank.x + 20;
+            tank.gun.y = tank.y + 25;
+            
+            if (tank.focusEntity != null)
+            {       
+              var iPlayerAngle = angle(tank.focusEntity.x + 25, tank.focusEntity.y + 25, tank.x + 25, tank.y + 25) + 90;
+              tank.gun.rotation = iPlayerAngle
+              console.log(iPlayerAngle);
+              //move towards player
+              /*
+               135    180      225        
+                   
+                90     X     270                                   
+                                   
+                 45      0     -45  
+              */
+              var iAttackSpeed = 1
+              if (iPlayerAngle >= -45 && iPlayerAngle < 45)
+              {
+                console.log("down");
+                tank.y += iAttackSpeed;
+                tank._dy = iAttackSpeed;
+                tank._dx = 0
+              }
+              else if (iPlayerAngle >= 45 && iPlayerAngle <= 135)
+              {
+                console.log("left");
+                tank.x -= iAttackSpeed;
+                tank._dy = 0;
+                tank._dx = -iAttackSpeed;
+              }
+              else if (iPlayerAngle < -45 || iPlayerAngle > 225)
+              {
+                console.log("right");
+                tank.x += iAttackSpeed;
+                tank._dy = 0;
+                tank._dx = iAttackSpeed;
+              }
+              else if (iPlayerAngle > 135 && iPlayerAngle <= 225)
+              {
+                console.log("up");
+                tank.y -= iAttackSpeed;
+                tank._dy = -iAttackSpeed
+                tank._dx = 0;
+              }
+            }
+          });
+        },
+        activateAutoAttack: function()
+        {          
+          var tank = this;
+          
+          tank.shootInternal = setInterval(function()
+          {             
+            var xDistance = (p1tank.x - tank.x)*0.02;
+            var yDistance = (p1tank.y - tank.y)*0.02;
+
+            var projectile = Crafty.e("2D, DOM, Color, Projectile");
+            projectile.attr(
+            {
+              x: tank.x + 20,
+              y: tank.y + 25,
+              w: 5,
+              h: 5,
+              xDistance: xDistance,
+              yDistance: yDistance
+            })
+            .color('#00F');
+            
+            projectile.componentToDestroy = "Player";
+            
+            projectile.fire();
+  
+          }, 1000);          
+        },
+        deactivateAutoAttack: function()
+        {
+          var tank = this;
+          clearInterval(tank.shootInternal);
+        }
+      });
+      
+      var iGameWidth = document.documentElement.clientWidth-10;
+      var iGameHeight = document.documentElement.clientHeight-10;
+      Crafty.init(iGameWidth, iGameHeight, document.getElementById('game'));
+        
+      var p1tank = Crafty.e('Multiway, Tank, Player')
+      .multiway(150, {UP_ARROW: -90, DOWN_ARROW: 90, RIGHT_ARROW: 0, LEFT_ARROW: 180}, {multipleDirectionBehavior: "first"});
+      p1tank.gun.color('#00a100')
+      
+      function angle(cx, cy, ex, ey) {
+        var dy = ey - cy;
+        var dx = ex - cx;
+        var theta = Math.atan2(dy, dx); // range (-PI, PI]
+        theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
+        return theta;
+      }
+      function angle360(cx, cy, ex, ey) {
+        var theta = angle(cx, cy, ex, ey); // range (-180, 180]
+        if (theta < 0) theta = 360 + theta; // range [0, 360)
+        return theta;
+      }
+      Crafty.addEvent(this, Crafty.stage.elem, 'mousemove', function(e)
+      {
+        var relative = Crafty.domHelper.translate(e.clientX, e.clientY);           
+        p1tank.gun.rotation = angle(relative.x, relative.y, p1tank.x + 25, p1tank.y + 25) + 90;
+      }.bind(this));    
+      
+      for (var i = 0; i < 3; i++)
+      {
+        var enemy = Crafty.e('Tank, Enemy')
+        .attr({x: getRandomIntInclusive(100, Crafty.viewport.width - 50), y: getRandomIntInclusive(100, Crafty.viewport.height - 50), w: 50, h: 50})
+        .color('#FF0000');
+        
+        enemy.focusEntity = p1tank;
+        
+        enemy.gun.color("#000");
+        
+        enemy.activateAutoAttack();
+        
+      }      
+      
+      Crafty.addEvent(this, Crafty.stage.elem, 'mousedown', function(e)
+      {
+        var relative = Crafty.domHelper.translate(e.clientX, e.clientY);
+        
+        var xDistance = (relative.x - p1tank.x)*0.02;
+        var yDistance = (relative.y - p1tank.y)*0.02;
+
+        var projectile = Crafty.e("2D, DOM, Color, Projectile");
+        projectile.attr(
+        {
+          x: p1tank.x + 20,
+          y: p1tank.y + 25,
+          w: 5,
+          h: 5,
+          xDistance: xDistance,
+          yDistance: yDistance
+        })
+        .color('#00F');
+            
+        projectile.componentToDestroy = "Enemy";
+        
+        projectile.fire();
+      }.bind(this));    
+    
+      function getRandomIntInclusive(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min; //The maximum is inclusive and the minimum is inclusive 
+      }
+
+      //OUTER EDGE WALLS
+      Crafty.e('2D, DOM, Color, Wall')
+      .attr({x: 0, y: 0, w: 10, h: Crafty.viewport.height})
+      .color('#888');
+      
+      Crafty.e('2D, DOM, Color, Wall')
+      .attr({x: 0, y: 0, w: Crafty.viewport.width, h: 10})
+      .color('#888');
+      
+      Crafty.e('2D, DOM, Color, Wall')
+      .attr({x: Crafty.viewport.width - 10, y: 0, w: 10, h: Crafty.viewport.height})
+      .color('#888');
+      
+      Crafty.e('2D, DOM, Color, Wall')
+      .attr({x: 0, y: Crafty.viewport.height - 10, w: Crafty.viewport.width, h: 10})
+      .color('#888');
+      
+      //RANDOM INTERIOR WALLS
+      for (var i = 0; i < 8; i++)
+      {
+        Crafty.e('2D, DOM, Color, Wall')
+        .attr({x: getRandomIntInclusive(200, Crafty.viewport.width - 300), y: getRandomIntInclusive(200, Crafty.viewport.height - 300), w: 50, h: 50})
+        .color('#888')
+      }
+
+    </script>
+  </body>
+</html>
