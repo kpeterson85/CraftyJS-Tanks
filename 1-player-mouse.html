@@ -165,7 +165,7 @@
       
       function ShowNextRound()
       {
-        Crafty.e("2D, DOM, Text, RoundNumber").attr({ x: Crafty.viewport.width / 2, y: Crafty.viewport.height / 2 }).text("Wave " + iRound);
+        Crafty.e("2D, DOM, Text, RoundNumber").attr({ x: Crafty.viewport.height / 2, y: Crafty.viewport.height / 2 }).text("Wave&nbsp;" + iRound).textFont({ size: '60px', weight: 'bold' }).textAlign("center");
         
         setTimeout(function()
         {
@@ -204,6 +204,7 @@
       function StartRound()
       {
         p1tank = Crafty.e('Multiway, Tank, Player')
+        .attr({x: Crafty.viewport.width / 2, y: Crafty.viewport.height / 2})
         .multiway(150, {UP_ARROW: -90, DOWN_ARROW: 90, RIGHT_ARROW: 0, LEFT_ARROW: 180}, {multipleDirectionBehavior: "first"});
         p1tank.gun.color('#00a100')        
         
