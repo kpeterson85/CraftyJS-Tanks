@@ -9,6 +9,7 @@
       {
         xDistance: 0,
         yDistance: 0,
+        damage: 5,
         init: function()
         {
           this.requires("Collision");
@@ -35,6 +36,9 @@
         gun: null,
         focusEntity: null,
         shootInternal: null,
+        health: 100,
+        healthbarBorder: null,
+        healthbar: null,
         init: function()
         {
           var tank = this;
@@ -55,10 +59,24 @@
           .attr({x: 50, y: 50, w: 10, h: 50})          
           .origin('top center');
           
+          tank.healthbar = Crafty.e('2D, DOM, Color')
+          .attr({x: 0, y: 0, w: 48, h: 3})      
+          .color('#00FF00');
+          
+          tank.healthbarBorder = Crafty.e('2D, DOM, Color')
+          .attr({x: 0, y: 0, w: 48, h: 3})      
+          .css({'border': '1px solid black'});
+          
           tank.bind('EnterFrame', function()
           {
             tank.gun.x = tank.x + 20;
             tank.gun.y = tank.y + 25;
+            
+            tank.healthbar.x = tank.x + 1;
+            tank.healthbar.y = tank.y + 53;
+            
+            tank.healthbarBorder.x = tank.x;
+            tank.healthbarBorder.y = tank.y + 52;
           });
           
           
@@ -165,7 +183,7 @@
       
       function ShowNextRound()
       {
-        Crafty.e("2D, DOM, Text, RoundNumber").attr({ x: Crafty.viewport.height / 2, y: Crafty.viewport.height / 2 }).text("Wave&nbsp;" + iRound).textFont({ size: '60px', weight: 'bold' }).textAlign("center");
+        Crafty.e("2D, DOM, Text, RoundNumber").attr({ x: Crafty.viewport.width / 2 - 100, y: Crafty.viewport.height / 2 - 25 }).text("Wave&nbsp;" + iRound).textFont({ size: '60px', weight: 'bold' }).textAlign("center");
         
         setTimeout(function()
         {
@@ -283,6 +301,10 @@
             {
               p1tank.gun.destroy();
               p1tank.destroy();
+              Crafty("Projectile").each(function()
+              {
+                this.destroy();
+              });              
               Crafty("Wall").each(function()
               {
                 this.destroy();
@@ -316,11 +338,34 @@
         .color('#888');
         */
         
-        //RANDOM INTERIOR WALLS
+        //RANDOM WALLS AROUND PLAYER
         for (var i = 0; i < 8; i++)
         {
+          var iWall = getRandomIntInclusive(1, 4);
+          var iX = 0;
+          var iY = 0;
+          if (iWall == 1) //top
+          {
+            iX = getRandomIntInclusive(100, Crafty.viewport.width - 100);
+            iY = getRandomIntInclusive(100, Crafty.viewport.height / 2 - 100);
+          }
+          else if (iWall == 2) //right
+          {
+            iX = getRandomIntInclusive(Crafty.viewport.width / 2 + 100, Crafty.viewport.width - 100);
+            iY = getRandomIntInclusive(100, Crafty.viewport.height - 100);
+          }
+          else if (iWall == 3) //bottom
+          {
+            iX = getRandomIntInclusive(100, Crafty.viewport.width - 100);
+            iY = getRandomIntInclusive(Crafty.viewport.height / 2 + 100, Crafty.viewport.height - 100);
+          }
+          else if (iWall == 4) //left
+          {
+            iX = getRandomIntInclusive(100, Crafty.viewport.width / 2 - 100);
+            iY = getRandomIntInclusive(100, Crafty.viewport.height - 100);
+          }
           Crafty.e('2D, DOM, Color, Wall')
-          .attr({x: getRandomIntInclusive(200, Crafty.viewport.width - 300), y: getRandomIntInclusive(200, Crafty.viewport.height - 300), w: 50, h: 50})
+          .attr({x: iX, y: iY, w: 50, h: 50})
           .color('#888')
         }
       }
