@@ -9,7 +9,7 @@
       {
         xDistance: 0,
         yDistance: 0,
-        damage: 5,
+        damage: 20,
         init: function()
         {
           this.requires("Collision");
@@ -37,6 +37,7 @@
         focusEntity: null,
         shootInternal: null,
         health: 100,
+        healthbarOriginalWidth: 48,
         healthbarBorder: null,
         healthbar: null,
         init: function()
@@ -151,13 +152,20 @@
             
             projectile.onHit("Player", function(target)
             {
-              Crafty("Enemy").each(function()
-              {
-                this.deactivateAutoAttack(); //stop all enemies from shooting
-              });
-              target[0].obj.destroy();
-              target[0].obj.gun.destroy();
-              this.destroy();              
+              target[0].obj.health -= this.damage;
+              target[0].obj.healthbar.w = target[0].obj.healthbarOriginalWidth * (target[0].obj.health/100);
+              this.destroy(); 
+              if(target[0].obj.health <= 0)
+              {            
+                Crafty("Enemy").each(function()
+                {
+                  this.deactivateAutoAttack(); //stop all enemies from shooting
+                });
+                target[0].obj.destroy();
+                target[0].obj.gun.destroy();
+                target[0].obj.healthbar.destroy();
+                target[0].obj.healthbarBorder.destroy();
+              }                             
             });
             
             projectile.fire();
@@ -291,26 +299,35 @@
           .color('#00F');
               
           projectile.onHit("Enemy", function(target)
-          {
-            target[0].obj.deactivateAutoAttack();
-            target[0].obj.destroy();
-            target[0].obj.gun.destroy();
+          {            
+            target[0].obj.health -= this.damage;
+            target[0].obj.healthbar.w = target[0].obj.healthbarOriginalWidth * (target[0].obj.health/100);
             this.destroy();
-            
-            if (Crafty("Enemy").length == 0)
-            {
-              p1tank.gun.destroy();
-              p1tank.destroy();
-              Crafty("Projectile").each(function()
+            if(target[0].obj.health <= 0)
+            {            
+              target[0].obj.deactivateAutoAttack();
+              target[0].obj.destroy();
+              target[0].obj.gun.destroy();
+              target[0].obj.healthbar.destroy();
+              target[0].obj.healthbarBorder.destroy();
+              
+              if (Crafty("Enemy").length == 0)
               {
-                this.destroy();
-              });              
-              Crafty("Wall").each(function()
-              {
-                this.destroy();
-              });
-              iRound += 1;
-              ShowNextRound();
+                p1tank.gun.destroy();
+                p1tank.healthbar.destroy();
+                p1tank.healthbarBorder.destroy();
+                p1tank.destroy();
+                Crafty("Projectile").each(function()
+                {
+                  this.destroy();
+                });              
+                Crafty("Wall").each(function()
+                {
+                  this.destroy();
+                });
+                iRound += 1;
+                ShowNextRound();
+              }
             }
           });
           
