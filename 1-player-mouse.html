@@ -34,19 +34,25 @@
       Crafty.c("Tank",
       {
         gun: null,
-        focusEntity: null,
-        shootInternal: null,
-        health: 100,
-        healthbarOriginalWidth: 48,
         healthbarBorder: null,
         healthbar: null,
+        focusEntity: null,
+        shootInternal: null,
+        health: 0,
+        healthOriginal: 0,
+        moveSpeed: 1,
         init: function()
         {
           var tank = this;
           tank
           .requires("2D, DOM, Color, Collision")
-          .attr({x: 50, y: 50, w: 50, h: 50})
-          .color('#00FF00')
+          .attr({x: 0, y: 0})          
+        },
+        build: function()
+        {
+          var tank = this;
+          
+          tank.healthOriginal = tank.health;
           
           tank.onHit("Wall", function(target)
           {
@@ -57,30 +63,30 @@
           tank.origin("center");
           
           tank.gun = Crafty.e('2D, DOM, Color')
-          .attr({x: 50, y: 50, w: 10, h: 50})          
+          .attr({x: 0, y: 0, w: tank.w/5, h: tank.h})          
           .origin('top center');
           
           tank.healthbar = Crafty.e('2D, DOM, Color')
-          .attr({x: 0, y: 0, w: 48, h: 3})      
+          .attr({x: 0, y: 0, w: tank.w-2, h: 3})      
           .color('#00FF00');
           
           tank.healthbarBorder = Crafty.e('2D, DOM, Color')
-          .attr({x: 0, y: 0, w: 48, h: 3})      
+          .attr({x: 0, y: 0, w: tank.w-2, h: 3})      
           .css({'border': '1px solid black'});
           
           tank.bind('EnterFrame', function()
           {
-            tank.gun.x = tank.x + 20;
-            tank.gun.y = tank.y + 25;
+            tank.gun.x = tank.x + ((tank.w/2) - (tank.w/5/2));
+            tank.gun.y = tank.y + (tank.h/2);
             
             tank.healthbar.x = tank.x + 1;
-            tank.healthbar.y = tank.y + 53;
+            tank.healthbar.y = tank.y + tank.h + 3;
             
             tank.healthbarBorder.x = tank.x;
-            tank.healthbarBorder.y = tank.y + 52;
+            tank.healthbarBorder.y = tank.y + tank.h + 2;
           });
           
-          
+          return this;
         },
         activateAutoAttack: function()
         {          
@@ -90,7 +96,7 @@
           {            
             if (tank.focusEntity != null)
             {       
-              var iPlayerAngle = angle(tank.focusEntity.x + 25, tank.focusEntity.y + 25, tank.x + 25, tank.y + 25) + 90;
+              var iPlayerAngle = angle(tank.focusEntity.x + (tank.focusEntity.w/2), tank.focusEntity.y + (tank.focusEntity.h/2), tank.x + (tank.w/2), tank.y + (tank.h/2)) + 90;
               tank.gun.rotation = iPlayerAngle
               //console.log(iPlayerAngle);
               //move towards player
@@ -101,33 +107,32 @@
                                    
                 45     0     -45  
               */
-              var iAttackSpeed = 1
               if (iPlayerAngle >= -45 && iPlayerAngle < 45)
               {
                 //console.log("down");
-                tank.y += iAttackSpeed;
-                tank._dy = iAttackSpeed;
+                tank.y += tank.moveSpeed;
+                tank._dy = tank.moveSpeed;
                 tank._dx = 0
               }
               else if (iPlayerAngle >= 45 && iPlayerAngle <= 135)
               {
                 //console.log("left");
-                tank.x -= iAttackSpeed;
+                tank.x -= tank.moveSpeed;
                 tank._dy = 0;
-                tank._dx = -iAttackSpeed;
+                tank._dx = -tank.moveSpeed;
               }
               else if (iPlayerAngle < -45 || iPlayerAngle > 225)
               {
                 //console.log("right");
-                tank.x += iAttackSpeed;
+                tank.x += tank.moveSpeed;
                 tank._dy = 0;
-                tank._dx = iAttackSpeed;
+                tank._dx = tank.moveSpeed;
               }
               else if (iPlayerAngle > 135 && iPlayerAngle <= 225)
               {
                 //console.log("up");
-                tank.y -= iAttackSpeed;
-                tank._dy = -iAttackSpeed
+                tank.y -= tank.moveSpeed;
+                tank._dy = -tank.moveSpeed
                 tank._dx = 0;
               }
             }
@@ -135,16 +140,17 @@
           
           tank.shootInternal = setInterval(function()
           {             
-            var xDistance = (p1tank.x - tank.x)*0.02;
-            var yDistance = (p1tank.y - tank.y)*0.02;
+            var xDistance = (p1tank.x - tank.x) * 0.02;
+            var yDistance = (p1tank.y - tank.y) * 0.02;
 
             var projectile = Crafty.e("2D, DOM, Color, Projectile");
             projectile.attr(
             {
-              x: tank.x + 20,
-              y: tank.y + 25,
+              x: tank.x + (tank.w/2),
+              y: tank.y + (tank.h/2),
               w: 5,
               h: 5,
+              damage: 20,
               xDistance: xDistance,
               yDistance: yDistance
             })
@@ -153,7 +159,7 @@
             projectile.onHit("Player", function(target)
             {
               target[0].obj.health -= this.damage;
-              target[0].obj.healthbar.w = target[0].obj.healthbarOriginalWidth * (target[0].obj.health/100);
+              target[0].obj.healthbar.w = (target[0].obj.w-2) * (target[0].obj.health/target[0].obj.healthOriginal);
               this.destroy(); 
               if(target[0].obj.health <= 0)
               {            
@@ -170,13 +176,17 @@
             
             projectile.fire();
   
-          }, 1000);          
+          }, 1000);   
+
+          return this;          
         },
         deactivateAutoAttack: function()
         {
           var tank = this;
           tank.unbind('EnterFrame');
           clearInterval(tank.shootInternal);
+          
+          return this;
         }
       });
       
@@ -230,14 +240,22 @@
       function StartRound()
       {
         p1tank = Crafty.e('Multiway, Tank, Player')
-        .attr({x: Crafty.viewport.width / 2, y: Crafty.viewport.height / 2})
-        .multiway(150, {UP_ARROW: -90, DOWN_ARROW: 90, RIGHT_ARROW: 0, LEFT_ARROW: 180}, {multipleDirectionBehavior: "first"});
+        .attr({
+          x: Crafty.viewport.width / 2,
+          y: Crafty.viewport.height / 2,
+          w: 50,
+          h: 50,
+          health: 100
+        })
+        .multiway(150, {UP_ARROW: -90, DOWN_ARROW: 90, RIGHT_ARROW: 0, LEFT_ARROW: 180}, {multipleDirectionBehavior: "first"})
+        .color("#00FF00")
+        .build();
         p1tank.gun.color('#00a100')        
         
         Crafty.addEvent(this, Crafty.stage.elem, 'mousemove', function(e)
         {
           var relative = Crafty.domHelper.translate(e.clientX, e.clientY);           
-          p1tank.gun.rotation = angle(relative.x, relative.y, p1tank.x + 25, p1tank.y + 25) + 90;
+          p1tank.gun.rotation = angle(relative.x, relative.y, p1tank.x + (p1tank.w/2), p1tank.y + (p1tank.h/2)) + 90;
         }.bind(this));    
         
         for (var i = 0; i < iRound; i++)
@@ -268,13 +286,18 @@
           }
 
           var enemy = Crafty.e('Tank, Enemy')
-          .attr({x: iX, y: iY, w: 50, h: 50})
-          .color('#FF0000');
-          
-          enemy.focusEntity = p1tank;
-          
-          enemy.gun.color("#000");
-          
+          .attr({
+            x: iX,
+            y: iY,
+            w: 50,
+            h: 50,
+            health: 100,
+            moveSpeed: 1,
+            focusEntity: p1tank
+          })
+          .color('#FF0000')
+          .build();          
+          enemy.gun.color("#000");          
           enemy.activateAutoAttack();
           
         }      
@@ -283,16 +306,17 @@
         {
           var relative = Crafty.domHelper.translate(e.clientX, e.clientY);
           
-          var xDistance = (relative.x - p1tank.x)*0.02;
-          var yDistance = (relative.y - p1tank.y)*0.02;
+          var xDistance = (relative.x - p1tank.x) * 0.02;
+          var yDistance = (relative.y - p1tank.y) * 0.02;
 
           var projectile = Crafty.e("2D, DOM, Color, Projectile");
           projectile.attr(
           {
-            x: p1tank.x + 20,
-            y: p1tank.y + 25,
+            x: p1tank.x + (p1tank.w/2),
+            y: p1tank.y + (p1tank.h/2),
             w: 5,
             h: 5,
+            damage: 50,
             xDistance: xDistance,
             yDistance: yDistance
           })
@@ -301,7 +325,7 @@
           projectile.onHit("Enemy", function(target)
           {            
             target[0].obj.health -= this.damage;
-            target[0].obj.healthbar.w = target[0].obj.healthbarOriginalWidth * (target[0].obj.health/100);
+            target[0].obj.healthbar.w = (target[0].obj.w-2) * (target[0].obj.health/target[0].obj.healthOriginal);
             this.destroy();
             if(target[0].obj.health <= 0)
             {            
