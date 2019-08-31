@@ -9,7 +9,7 @@
       {
         xDistance: 0,
         yDistance: 0,
-        damage: 20,
+        damage: 0,
         init: function()
         {
           this.requires("Collision");
@@ -41,6 +41,7 @@
         health: 0,
         healthOriginal: 0,
         moveSpeed: 1,
+        projectileDamage: 0,
         init: function()
         {
           var tank = this;
@@ -150,7 +151,7 @@
               y: tank.y + (tank.h/2),
               w: 5,
               h: 5,
-              damage: 20,
+              damage: tank.projectileDamage,
               xDistance: xDistance,
               yDistance: yDistance
             })
@@ -260,47 +261,103 @@
         
         for (var i = 0; i < iRound; i++)
         {
-          //pick which sides of the board they will appear (1-top, 2-right, 3-bottom, 4-left)
-          var iWall = getRandomIntInclusive(1, 4);
-          var iX = 0;
-          var iY = 0;
-          if (iWall == 1) //top
+          function GetRandomEnemeyStartingPoint()
           {
-            iX = getRandomIntInclusive(0, Crafty.viewport.width);
-            iY = -50;
-          }
-          else if (iWall == 2) //right
-          {
-            iX = Crafty.viewport.width + 50;
-            iY = getRandomIntInclusive(0, Crafty.viewport.height);
-          }
-          else if (iWall == 3) //bottom
-          {
-            iX = getRandomIntInclusive(0, Crafty.viewport.width);
-            iY = Crafty.viewport.height + 50;
-          }
-          else if (iWall == 4) //left
-          {
-            iX = -50;
-            iY = getRandomIntInclusive(0, Crafty.viewport.height);;
+            //pick which sides of the board they will appear (1-top, 2-right, 3-bottom, 4-left)
+            var iWall = getRandomIntInclusive(1, 4);
+            var iX = 0;
+            var iY = 0;
+            if (iWall == 1) //top
+            {
+              iX = getRandomIntInclusive(0, Crafty.viewport.width);
+              iY = -50;
+            }
+            else if (iWall == 2) //right
+            {
+              iX = Crafty.viewport.width + 50;
+              iY = getRandomIntInclusive(0, Crafty.viewport.height);
+            }
+            else if (iWall == 3) //bottom
+            {
+              iX = getRandomIntInclusive(0, Crafty.viewport.width);
+              iY = Crafty.viewport.height + 50;
+            }
+            else if (iWall == 4) //left
+            {
+              iX = -50;
+              iY = getRandomIntInclusive(0, Crafty.viewport.height);;
+            }
+            
+            return { x: iX, y: iY };
           }
 
+          var oStartingPoints = GetRandomEnemeyStartingPoint();
           var enemy = Crafty.e('Tank, Enemy')
           .attr({
-            x: iX,
-            y: iY,
+            x: oStartingPoints.x,
+            y: oStartingPoints.y,
             w: 50,
             h: 50,
             health: 100,
             moveSpeed: 1,
-            focusEntity: p1tank
+            focusEntity: p1tank,
+            projectileDamage: 10
           })
           .color('#FF0000')
           .build();          
           enemy.gun.color("#000");          
-          enemy.activateAutoAttack();
-          
-        }      
+          enemy.activateAutoAttack();          
+        }   
+
+        //every 2rd round add a couple of little guys
+        if (iRound % 2 == 0)
+        {
+          var iNumber = (iRound / 2) * 2;
+          for (var i = 0; i < iNumber; i++)
+          {
+            var oStartingPoints = GetRandomEnemeyStartingPoint();
+            var enemy = Crafty.e('Tank, Enemy')
+            .attr({
+              x: oStartingPoints.x,
+              y: oStartingPoints.y,
+              w: 25,
+              h: 25,
+              health: 50,
+              moveSpeed: 2,
+              focusEntity: p1tank,
+              projectileDamage: 5
+            })
+            .color('#ff9500')
+            .build();          
+            enemy.gun.color("#000");          
+            enemy.activateAutoAttack();
+          }
+        }     
+
+        //every 5th round add a couple of big guys
+        if (iRound % 5 == 0)
+        {
+          var iNumber = (iRound / 5);
+          for (var i = 0; i < iNumber; i++)
+          {
+            var oStartingPoints = GetRandomEnemeyStartingPoint();
+            var enemy = Crafty.e('Tank, Enemy')
+            .attr({
+              x: oStartingPoints.x,
+              y: oStartingPoints.y,
+              w: 100,
+              h: 100,
+              health: 500,
+              moveSpeed: 1,
+              focusEntity: p1tank,
+              projectileDamage: 20
+            })
+            .color('#00f7ff')
+            .build();          
+            enemy.gun.color("#000");          
+            enemy.activateAutoAttack();
+          }
+        }          
         
         Crafty.addEvent(this, Crafty.stage.elem, 'mousedown', function(e)
         {
@@ -358,27 +415,6 @@
           projectile.fire();
         }.bind(this));    
       
-        
-
-        //OUTER EDGE WALLS
-        /*
-        Crafty.e('2D, DOM, Color, Wall')
-        .attr({x: 0, y: 0, w: 10, h: Crafty.viewport.height})
-        .color('#888');
-        
-        Crafty.e('2D, DOM, Color, Wall')
-        .attr({x: 0, y: 0, w: Crafty.viewport.width, h: 10})
-        .color('#888');
-        
-        Crafty.e('2D, DOM, Color, Wall')
-        .attr({x: Crafty.viewport.width - 10, y: 0, w: 10, h: Crafty.viewport.height})
-        .color('#888');
-        
-        Crafty.e('2D, DOM, Color, Wall')
-        .attr({x: 0, y: Crafty.viewport.height - 10, w: Crafty.viewport.width, h: 10})
-        .color('#888');
-        */
-        
         //RANDOM WALLS AROUND PLAYER
         for (var i = 0; i < 8; i++)
         {
