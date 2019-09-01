@@ -85,6 +85,24 @@
             
             tank.healthbarBorder.x = tank.x;
             tank.healthbarBorder.y = tank.y + tank.h + 2;
+            
+            if (tank.y > Crafty.viewport.height + 5)
+            {
+              tank.y = 0 - tank.h;
+            }
+            else if (tank.y < 0 - tank.h - 5)
+            {
+              tank.y = Crafty.viewport.height;
+            }
+            
+            if (tank.x > Crafty.viewport.width)
+            {
+              tank.x = 0 - tank.w;
+            }
+            else if (tank.x < 0 - tank.w - 5)
+            {
+              tank.x = Crafty.viewport.width;
+            }
           });
           
           return this;
